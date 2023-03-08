@@ -13,6 +13,7 @@ Tiny Pure Python Bi-Direction RPC Module, Compatible with MicroPython
 * Disconnect detection using heart-beat (timeout configurable)
 * Decorator-modify-Command mode and local-method-like calling mode
 * Support simple dumpable object, normal function, coroutine function
+* Exception remote-catching and local-rising
 
 ## Server style
 ```python
