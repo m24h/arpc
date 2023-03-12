@@ -83,9 +83,9 @@ class Session(object):
 			self._reqs[rid]=evt
 			await self._write({'act':'cmd', 'rid':rid, 'name':name, 'args':args, 'kargs':kargs})
 			await evt.wait()
+			resp=self._reqs[rid]
 		finally:
 			del self._reqs[rid]
-		resp=evt._arpc_resp
 		if isinstance(resp, BaseException): #exception from dispatcher
 			raise resp
 		else:
@@ -138,11 +138,11 @@ class Session(object):
 						await self._write({'act':'res', 'rid':rid, 'res':cmd})					
 				elif act=='res':
 					if (evt:=self._reqs.get(rid, None)):
-						evt._arpc_resp=data.get('res',None)
+						self._reqs[rid]=data.get('res',None)
 						evt.set()
 				elif act=='err':
 					if (evt:=self._reqs.get(rid, None)):
-						evt._arpc_resp=RemoteException(data.get('cls',None), data.get('args',()))
+						self._reqs[rid]=RemoteException(data.get('cls',None), data.get('args',()))
 						evt.set()
 				else: #unknown
 					pass
