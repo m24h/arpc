@@ -24,5 +24,5 @@ But a stop.py scripts is provided, to stop the RPC event loop, then REPL/WebREPL
 stop.py depends on 'exec' 'todo' RPC methods defined in boot.py, if there's no any mechanism to stop the event loop,
 maybe re-burning micropython firmware can help it out.
 
-Micropython on ESP8266 does not provide '__name__' attribute for function, so the PRC name must be explicitly provided when decorating a function as RPC command.
+Micropython on ESP8266 does not provide '\_\_name\_\_' attribute for function, so the PRC name must be explicitly provided when decorating a function as RPC command.
 
