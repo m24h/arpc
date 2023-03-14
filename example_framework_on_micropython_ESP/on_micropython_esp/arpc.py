@@ -153,9 +153,11 @@ class Session(object):
 		finally:
 			self._task=None
 			exc=exc or RuntimeError('session is closed')
-			for evt in self._reqs.values():
-				evt._arpc_resp=exc
-				evt.set()
+			for k in self._reqs:
+				evt=self._reqs[k]
+				if isinstance(evt, asyncio.Event):
+					self._reqs[k]=exc
+					evt.set()
 
 #connect to a server, return the Session object
 async def connect(host, port=8267, rpc=None, password=None, hbeat=30):
