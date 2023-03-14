@@ -6,12 +6,16 @@ import gc
 import network
 import time
 import conf
+import sys
 
 import micropython
 micropython.alloc_emergency_exception_buf(100)
 
 #init board
-import init
+try:
+	import init
+except BaseException as e:
+	sys.print_exception(e)
 gc.collect()
 
 #init wlan AP
@@ -51,6 +55,7 @@ if conf.rpc is not None and conf.rpc['active']:
 	rpc=arpc.RPC()
 	
 	#some useful command
+	rpc['list']=lambda : tuple(rpc.keys())
 	rpc['eval']=eval
 	rpc['exec']=exec
 	rpc['gcc']=gc.collect
@@ -64,7 +69,10 @@ if conf.rpc is not None and conf.rpc['active']:
 		asyncio.get_event_loop().create_task(_todo())
 	
 	# other RPC commands
-	import rpcs
+	try:
+		import rpcs
+	except BaseException as e:
+		sys.print_exception(e)
 	gc.collect()
 		
 	try:
@@ -88,4 +96,3 @@ if conf.webrepl is not None and conf.webrepl['active']:
 	import webrepl
 	webrepl.start(port=conf.webrepl['port'], password=conf.webrepl['password'])
 gc.collect()
-
