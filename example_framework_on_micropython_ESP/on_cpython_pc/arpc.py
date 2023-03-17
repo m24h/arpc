@@ -28,6 +28,7 @@ class RemoteException(Exception):
 class Session(object):
 	def __init__(self, rpc, reader, writer):
 		self._task=None #dispatcher task, None means session is closed
+		self._hbtask=None #heat beat task
 		self._rpc=rpc
 		self._reader=reader 
 		self._writer=writer
@@ -42,6 +43,9 @@ class Session(object):
 				self._task.cancel()
 				await self._task
 			self._task=None
+		if self._hbtask is not None:
+			self._hbtask.cancel()
+			await self._hbtask
 		if self._writer is not None: 
 			try: #maybe already closed if disconnected
 				self._writer.close()
@@ -61,6 +65,7 @@ class Session(object):
 	async def _read(self):
 		while (r:=self._reader): #maybe closed
 			data=await r.readline()
+			#print('r:', data)
 			if not data:  #EOF, disconnected
 				raise OSError('connection is closed')
 			try:
@@ -166,7 +171,7 @@ async def connect(host, port=8267, rpc=None, password=None, hbeat=30):
 		if password:
 			await sess._write({'act':'login', 'password':password})
 		if hbeat:
-			asyncio.get_event_loop().create_task(sess._heartbeat(hbeat))
+			sess._hbtask=asyncio.get_event_loop().create_task(sess._heartbeat(hbeat))
 		sess._task=asyncio.get_event_loop().create_task(sess._dispatch())
 		return sess
 
@@ -181,7 +186,7 @@ async def server(rpc, host='0.0.0.0', port=8267, password=None, hbeat=30):
 						return #do not answer anything, just leave, connection will be closed
 				sess._task=asyncio.current_task()
 				if hbeat:
-					asyncio.get_event_loop().create_task(sess._heartbeat(hbeat))
+					sess._hbtask=asyncio.get_event_loop().create_task(sess._heartbeat(hbeat))
 				await sess._dispatch()
 			except OSError: # ignore client disconnect
 				pass
