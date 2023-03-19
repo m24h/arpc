@@ -33,6 +33,7 @@ class Session(object):
 		self._reader=reader 
 		self._writer=writer
 		self._reqs=dict() #waiting calling requests
+		self._wlock=asyncio.Lock()
 	
 	async def __aenter__(self):
 		return self
@@ -58,9 +59,9 @@ class Session(object):
 	async def _write(self, obj):
 		data=json.dumps(obj, separators=(',', ':')).encode('ISO8859-1')
 		if (w:=self._writer): #maybe closed
-			w.write(data)
-			w.write(b'\r\n')
-			await w.drain()
+			async with self._wlock:
+				w.write(data+b'\r\n')
+				await w.drain()
 	
 	async def _read(self):
 		while (r:=self._reader): #maybe closed
@@ -111,7 +112,10 @@ class Session(object):
 			_sessions[tid]=self
 			res=await coro
 		except BaseException as e:
-			await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
+			try:
+				await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
+			except:
+				pass
 		else:
 			await self._write({'act':'res', 'rid':rid, 'res':res})
 		finally:
