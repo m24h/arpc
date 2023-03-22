@@ -42,11 +42,9 @@ class Session(object):
 		if self._task is not None:
 			if self._task is not asyncio.current_task():  
 				self._task.cancel()
-				await self._task
 			self._task=None
 		if self._hbtask is not None:
 			self._hbtask.cancel()
-			await self._hbtask
 		if self._writer is not None: 
 			try: #maybe already closed if disconnected
 				self._writer.close()
@@ -55,7 +53,7 @@ class Session(object):
 				pass
 			self._writer=None
 		self._reader=None #only writer is closeable in CPython
-	
+
 	async def _write(self, obj):
 		data=json.dumps(obj, separators=(',', ':')).encode('ISO8859-1')
 		if (w:=self._writer): #maybe closed
@@ -66,7 +64,6 @@ class Session(object):
 	async def _read(self):
 		while (r:=self._reader): #maybe closed
 			data=await r.readline()
-			#print('r:', data)
 			if not data:  #EOF, disconnected
 				raise OSError('connection is closed')
 			try:
@@ -80,16 +77,22 @@ class Session(object):
 	def __getattr__(self, name):
 		return lambda *args, **kargs : self(name, *args, **kargs)
 	
+	# call  remote procedure, if a not None '__arpc_toss' argument in kargs, it will not wait the response, and remote will not send the response 
 	async def __call__(self, name, *args, **kargs):
 		if self._task is None:
 			raise RuntimeError('session is closed')
-		evt=asyncio.Event()
-		rid=id(evt)
+		if kargs.pop('__arpc_toss', None) is None:
+			evt=asyncio.Event()
+			rid=id(evt)
+		else:
+			rid=None
+		await self._write({'act':'cmd', 'rid':rid, 'name':name, 'args':args, 'kargs':kargs})
+		if rid is None:
+			return None
 		try:
-			self._reqs[rid]=evt
-			await self._write({'act':'cmd', 'rid':rid, 'name':name, 'args':args, 'kargs':kargs})
-			await evt.wait()
-			resp=self._reqs[rid]
+				self._reqs[rid]=evt
+				await evt.wait()
+				resp=self._reqs[rid]
 		finally:
 			del self._reqs[rid]
 		if isinstance(resp, BaseException): #exception from dispatcher
@@ -112,12 +115,14 @@ class Session(object):
 			_sessions[tid]=self
 			res=await coro
 		except BaseException as e:
-			try:
-				await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
-			except:
-				pass
+			if rid is not None:
+				try:
+					await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
+				except:
+					pass
 		else:
-			await self._write({'act':'res', 'rid':rid, 'res':res})
+			if rid is not None:
+				await self._write({'act':'res', 'rid':rid, 'res':res})
 		finally:
 			del _sessions[tid]					
 		
@@ -131,7 +136,8 @@ class Session(object):
 				rid=data.get('rid',None)
 				if act=='cmd':
 					if not self._rpc or (name:=data.get('name', None)) not in self._rpc:
-						await self._write({'act':'err', 'rid':rid, 'cls':'NameError', 'args':('No such command',)})
+						if rid is not None:
+							await self._write({'act':'err', 'rid':rid, 'cls':'NameError', 'args':('No such command',)})
 					elif callable(cmd:=self._rpc[name]): 
 						try:
 							#cmd must return as soon as possible, don't make another RPC request directly, or dispatcher will be dead-locked
@@ -139,11 +145,12 @@ class Session(object):
 							if hasattr(res, 'send') and callable(res.send): #a coroutine
 								#create a new task to handle the coroutine (it will most likely take some time)
 								asyncio.get_event_loop().create_task(self._schedule(rid, res))
-							else:
+							elif rid is not None:
 								await self._write({'act':'res', 'rid':rid, 'res':res})
 						except BaseException as e:
-							await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
-					else: #must be a dumpable object
+							if rid is not None:
+								await self._write({'act':'err', 'rid':rid, 'cls':type(e).__name__, 'args':e.args})
+					elif rid is not None: #must be a dumpable object
 						await self._write({'act':'res', 'rid':rid, 'res':cmd})					
 				elif act=='res':
 					if (evt:=self._reqs.get(rid, None)):
@@ -254,7 +261,7 @@ if __name__=='__main__':
 			async with await connect('127.0.0.1', rpc=rpc, password='rrr') as sess:
 				try:
 					print(await sess.version())
-					print(await sess.inc(5))
+					print(await sess.inc(5, __arpc_toss=True)) # this will return None directly, and server will not send response
 					print(await sess.dec(5))
 				except Exception as e:
 					print(e)

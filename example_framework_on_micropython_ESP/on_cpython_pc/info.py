@@ -20,5 +20,18 @@ async def info():
 		print('micropython.stack_use :', await sess.eval('micropython.stack_use()'))
 		print('RPC :', await sess.list())
 		
+		try:
+			print('hw_id :', await sess.hw_id())
+		except:
+			pass
+		try:
+			print('app_id :', await sess.app_id())
+		except:
+			pass
+		try:
+			print('help :\n\t'+(await sess.help()).replace('\n','\n\t'))
+		except:
+			pass
+
 if __name__=='__main__':
 	asyncio.run(info())

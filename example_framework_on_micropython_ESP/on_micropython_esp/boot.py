@@ -59,14 +59,6 @@ if conf.rpc is not None and conf.rpc['active']:
 	rpc['eval']=eval
 	rpc['exec']=exec
 	rpc['gcc']=gc.collect
-
-	#scheduled and delayed exec
-	@rpc('todo')
-	def todo(tout, exe):
-		async def _todo():
-			await asyncio.sleep(tout)
-			exec(exe)
-		asyncio.get_event_loop().create_task(_todo())
 	
 	# other RPC commands
 	try:
