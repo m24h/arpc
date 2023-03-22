@@ -14,6 +14,7 @@ Tiny Pure Python Bi-Direction RPC Module, Compatible with MicroPython
 * Decorator-modify-Command mode and local-method-like calling mode
 * Support simple dumpable object, normal function, coroutine function
 * Exception remote-catching and local-rising
+* Stream-like not-wait-result calling in simple way, just add a '__arpc_toss=True'  keyword argument
 
 ## Server style
 ```python
