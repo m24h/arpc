@@ -42,9 +42,19 @@ class Session(object):
 		if self._task is not None:
 			if self._task is not asyncio.current_task():  
 				self._task.cancel()
+				if self._task:
+					try:
+						await self._task
+					except:
+						pass
 			self._task=None
 		if self._hbtask is not None:
 			self._hbtask.cancel()
+			if self._hbtask:
+				try:
+					await self._hbtask
+				except:
+					pass
 		if self._writer is not None: 
 			try: #maybe already closed if disconnected
 				self._writer.close()
