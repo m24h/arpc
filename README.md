@@ -45,7 +45,7 @@ asyncio.run(client())
   
 ## More examples  
 
-See the tail of source file
+See my <https://github.com/m24h/ESP8266ADDA>
 
 ## More detail
 
