@@ -65,7 +65,7 @@ class Session(object):
 		self._reader=None #only writer is closeable in CPython
 
 	async def _write(self, obj):
-		data=json.dumps(obj, separators=(',', ':')).encode('ISO8859-1')
+		data=json.dumps(obj, separators=(',', ':')).encode('utf-8')
 		if (w:=self._writer): #maybe closed
 			async with self._wlock:
 				w.write(data+b'\r\n')
@@ -77,7 +77,7 @@ class Session(object):
 			if not data:  #EOF, disconnected
 				raise OSError('connection is closed')
 			try:
-				data=json.loads(data.decode('ISO8859-1'))	#something wrong for utf-8 between micropython and cpython	
+				data=json.loads(data.decode('utf-8'))	#something wrong for utf-8 between micropython and cpython	
 				if isinstance(data, dict): 
 					return data
 			except ValueError:  #bad json string, ignore and continue
