@@ -16,6 +16,11 @@ Tiny Pure Python Bi-Direction RPC Module, Compatible with MicroPython
 * Exception remote-catching and local-rising
 * Stream-like not-wait-result calling in simple way, just add a '__arpc_toss=True'  keyword argument
 
+## Install
+```bash
+mpremote mip install github:m24h/arpc
+```
+
 ## Server style
 ```python
 import arpc
